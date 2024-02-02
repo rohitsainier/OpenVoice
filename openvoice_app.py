@@ -44,7 +44,7 @@ zh_source_se = torch.load(f'{zh_ckpt_base}/zh_default_se.pth').to(device)
 supported_languages = ['zh', 'en']
 
 
-def predict(prompt, style, audio_file_pth, use_mic, mic_file_path):
+def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed):
     # initialize a empty info
     text_hint = ''
     # first detect the input language
@@ -136,7 +136,8 @@ def predict(prompt, style, audio_file_pth, use_mic, mic_file_path):
         )
 
     src_path = f'{output_dir}/tmp.wav'
-    tts_model.tts(prompt, src_path, speaker=style, language=language)
+    tts_model.tts(prompt, src_path, speaker=style,
+                  language=language, speed=speed)
 
     save_path = f'{output_dir}/output.wav'
     # Run the tone color converter
@@ -218,6 +219,14 @@ with gr.Blocks(analytics_enabled=False) as demo:
                 info="Notice: Microphone input may not work properly under traffic",
             )
 
+            speed = gr.Slider(
+                label="Speed",
+                value=1.0,
+                minimum=0.0,
+                maximum=1.0,
+                step=0.1,
+            )
+
             tts_button = gr.Button("Send", elem_id="send-btn", visible=True)
 
         with gr.Column():
@@ -229,11 +238,11 @@ with gr.Blocks(analytics_enabled=False) as demo:
             gr.Examples(examples,
                         label="Examples",
                         inputs=[input_text_gr, style_gr,
-                                ref_gr, use_mic_gr, mic_gr],
+                                ref_gr, use_mic_gr, mic_gr, speed],
                         outputs=[out_text_gr, audio_gr, ref_audio_gr],
                         fn=predict,
                         cache_examples=False,)
-            tts_button.click(predict, [input_text_gr, style_gr, ref_gr, use_mic_gr, mic_gr], outputs=[
+            tts_button.click(predict, [input_text_gr, style_gr, ref_gr, use_mic_gr, mic_gr, speed], outputs=[
                              out_text_gr, audio_gr, ref_audio_gr])
 
 demo.queue()
