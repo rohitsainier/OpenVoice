@@ -6,6 +6,7 @@ from zipfile import ZipFile
 import langid
 import se_extractor
 from api import BaseSpeakerTTS, ToneColorConverter
+from text.compare import compare_audio
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--share", action='store_true',
@@ -149,7 +150,12 @@ def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed):
         output_path=save_path,
         message=encode_message)
 
-    text_hint += f'''Get response successfully \n'''
+    # Compare the synthesized audio with the reference audio
+    if audio_file_pth is not None:
+        identical, message = compare_audio(audio_file_pth, save_path)
+        text_hint += message
+
+    text_hint += f'''\nGet response successfully \n'''
 
     return (
         text_hint,
