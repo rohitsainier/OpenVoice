@@ -7,7 +7,8 @@ import langid
 import se_extractor
 from api import BaseSpeakerTTS, ToneColorConverter
 from text.compare import compare_audio
-
+from utils import load_vocals, calculate_generation_time
+import time
 parser = argparse.ArgumentParser()
 parser.add_argument("--share", action='store_true',
                     default=False, help="make link public")
@@ -45,7 +46,8 @@ zh_source_se = torch.load(f'{zh_ckpt_base}/zh_default_se.pth').to(device)
 supported_languages = ['zh', 'en']
 
 
-def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed):
+def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed, vocal):
+    start_time = time.time()
     # initialize a empty info
     text_hint = ''
     # first detect the input language
@@ -122,6 +124,22 @@ def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed):
         )
 
     # note diffusion_conditioning not used on hifigan (default mode), it will be empty but need to pass it to model.inference
+    # if vocal is not None:
+    #     try:
+    #         target_se = torch.load(
+    #             f'{vocals_dir}/{vocal}.pth', map_location=torch.device('cpu'))
+
+    #     except Exception as e:
+    #         text_hint += f"[ERROR] Error while loading the target vocal {str(e)} \n"
+    #         gr.Warning(
+    #             "[ERROR] Error while loading the target vocal {str(e)} \n"
+    #         )
+    #         return (
+    #             text_hint,
+    #             None,
+    #             None,
+    #         )
+    # else:
     try:
         target_se, audio_name = se_extractor.get_se(
             speaker_wav, tone_color_converter, target_dir='processed', vad=True)
@@ -156,7 +174,7 @@ def predict(prompt, style, audio_file_pth, use_mic, mic_file_path, speed):
         text_hint += message
 
     text_hint += f'''\nGet response successfully \n'''
-
+    calculate_generation_time(start_time)
     return (
         text_hint,
         save_path,
@@ -207,6 +225,13 @@ with gr.Blocks(analytics_enabled=False) as demo:
                          'terrified', 'angry', 'sad', 'friendly'],
                 value="default",
             )
+
+            vocal = gr.Dropdown(
+                label="Vocals",
+                info="Select a already cloned voice.",
+                choices=load_vocals(),
+                value=None,
+            )
             ref_gr = gr.Audio(
                 label="Reference Audio",
                 type="filepath",
@@ -244,11 +269,11 @@ with gr.Blocks(analytics_enabled=False) as demo:
             gr.Examples(examples,
                         label="Examples",
                         inputs=[input_text_gr, style_gr,
-                                ref_gr, use_mic_gr, mic_gr, speed],
+                                ref_gr, use_mic_gr, mic_gr, speed, vocal],
                         outputs=[out_text_gr, audio_gr, ref_audio_gr],
                         fn=predict,
                         cache_examples=False,)
-            tts_button.click(predict, [input_text_gr, style_gr, ref_gr, use_mic_gr, mic_gr, speed], outputs=[
+            tts_button.click(predict, [input_text_gr, style_gr, ref_gr, use_mic_gr, mic_gr, speed, vocal], outputs=[
                              out_text_gr, audio_gr, ref_audio_gr])
 
 demo.queue()

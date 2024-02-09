@@ -1,6 +1,8 @@
 import re
 import json
 import numpy as np
+import os
+import time
 
 
 def get_hparams_from_file(config_path):
@@ -10,6 +12,7 @@ def get_hparams_from_file(config_path):
 
     hparams = HParams(**config)
     return hparams
+
 
 class HParams:
     def __init__(self, **kwargs):
@@ -46,13 +49,13 @@ class HParams:
 def string_to_bits(string, pad_len=8):
     # Convert each character to its ASCII value
     ascii_values = [ord(char) for char in string]
-    
+
     # Convert ASCII values to binary representation
     binary_values = [bin(value)[2:].zfill(8) for value in ascii_values]
-    
+
     # Convert binary strings to integer arrays
     bit_arrays = [[int(bit) for bit in binary] for binary in binary_values]
-    
+
     # Convert list of arrays to NumPy array
     numpy_array = np.array(bit_arrays)
     numpy_array_full = np.zeros((pad_len, 8), dtype=numpy_array.dtype)
@@ -65,13 +68,13 @@ def string_to_bits(string, pad_len=8):
 def bits_to_string(bits_array):
     # Convert each row of the array to a binary string
     binary_values = [''.join(str(bit) for bit in row) for row in bits_array]
-    
+
     # Convert binary strings to ASCII values
     ascii_values = [int(binary, 2) for binary in binary_values]
-    
+
     # Convert ASCII values to characters
     output_string = ''.join(chr(value) for value in ascii_values)
-    
+
     return output_string
 
 
@@ -81,6 +84,7 @@ def split_sentence(text, min_len=10, language_str='[EN]'):
     else:
         sentences = split_sentences_zh(text, min_len=min_len)
     return sentences
+
 
 def split_sentences_latin(text, min_len=10):
     """Split Long sentences into list of short ones
@@ -101,7 +105,8 @@ def split_sentences_latin(text, min_len=10):
     text = re.sub('([,.!?;])', r'\1 $#!', text)
     # split
     sentences = [s.strip() for s in text.split('$#!')]
-    if len(sentences[-1]) == 0: del sentences[-1]
+    if len(sentences[-1]) == 0:
+        del sentences[-1]
 
     new_sentences = []
     new_sent = []
@@ -142,6 +147,7 @@ def merge_short_sentences_latin(sens):
         pass
     return sens_out
 
+
 def split_sentences_zh(text, min_len=10):
     text = re.sub('[。！？；]', '.', text)
     text = re.sub('[，]', ',', text)
@@ -152,7 +158,8 @@ def split_sentences_zh(text, min_len=10):
     # 分隔句子并去除前后空格
     # sentences = [s.strip() for s in re.split('(。|！|？|；)', text)]
     sentences = [s.strip() for s in text.split('$#!')]
-    if len(sentences[-1]) == 0: del sentences[-1]
+    if len(sentences[-1]) == 0:
+        del sentences[-1]
 
     new_sentences = []
     new_sent = []
@@ -192,3 +199,22 @@ def merge_short_sentences_zh(sens):
     except:
         pass
     return sens_out
+
+# load voices from vocals folder which have .pth extension
+
+
+def load_vocals():
+    voices = []
+    for voice in os.listdir('vocals'):
+        if voice.endswith('.pth'):
+            # append only name without .pth
+            voice = voice[:-4]
+            voices.append(voice)
+    return voices
+
+
+def calculate_generation_time(start_time):
+    end_time = time.time()
+    generation_time = end_time - start_time
+    print(f'generation time: {generation_time}')
+    return generation_time
